@@ -18,11 +18,13 @@ def readfile_df(path: str) -> DataFrame:
     df = pd.read_csv(path)
     return df
 
+
 # %% 
 """ Classes Ask and Bid """
 class Bid:
     def __init__(self, bid: pd.Series):
         self.buyer_id = bid["buyer_id"]
+        self.loan_type = bid["loan_type"]
         self.start = bid["start"]
         self.time_cd = bid["time_cd"]
         self.load_cd = bid["load_cd"]
@@ -35,7 +37,8 @@ class Bid:
  
 class Ask:
     def __init__(self, ask: pd.Series):
-        self.buyer_id = ask["seller_id"]
+        self.seller_id = ask["seller_id"]
+        self.loan_type = ask["loan_type"]
         self.start = ask["start"]
         self.time_cd = ask["time_cd"]
         self.load_cd = ask["load_cd"]
@@ -47,8 +50,44 @@ class Ask:
         self.price = ask["price"]
 # %% 
 """Classes for different categories of loans"""
-class FixedTermLoan:
+class BlockOrderLoan:
+    def __init__(self, bids: list, asks: list):
+        self.bids_BL = bids
+        self.asks_BL = asks
     pass
+
+def FixedTermLoan(bids: list, asks:list) -> DataFrame:
+    
+    index = []
+    columns = []
+    for b in bids:
+        index.append(b.buyer_id)
+    for a in asks:
+        columns.append(a.seller_id)
+        
+    matches = DataFrame(index = index, columns = columns)
+
+    for b in bids:
+        for a in asks:
+            if (b.start == a.start) and \
+                (b.time_cd == a.time_cd) and \
+                (b.load_cd == a.load_cd) and \
+                (b.ramp_cd == a.ramp_cd) and \
+                (b.serv_period == a.serv_period) and \
+                (b.time_db == a.time_db) and \
+                (b.load_db == a.load_db) and \
+                (b.ramp_db == a.ramp_db) and \
+                (b.price <= a.price):
+                
+                matches.loc[b.buyer_id][a.seller_id] = (a.price + b.price) / 2
+            
+            else:
+                pass
+    return matches
+            
+                
+                
+                    
 
 class VariableTermLoan:
     pass
@@ -66,30 +105,66 @@ class Auctioneer:
     """Trade mediator that matches bids and asks of participating traders.
     The Auctioneer actively pulls bids and asks from Buyer and Seller objects,
     and actively pushes allocations to them."""
+    def __init__(self, buyers: DataFrame, sellers: DataFrame):
+        self.buyers = buyers
+        self.sellers = sellers
 
     def match(self, bids: list, asks: list) -> list:
         """Clearing process that matched bids with asks.
         Returns allocation."""
-        # Todo: write matching algorithm
-        return []
+        self.matches = DataFrame()
+        self.bids = bids
+        self.asks = asks
+        self.bids_FTL = []
+        self.bids_VTL = []
+        self.bids_FTL = []
+        self.asks_FTL = []
+        self.asks_FTL = []
+        self.asks_VTL = []
+        self.asks_FTL = []
+        self.asks_FTL = []
+        
+        
+        for b in self.bids:
+            if b.loan_type == "FTL" or "VTL":
+                if b.loan_type == "FTL":
+                    self.bids_FTL.append(b)      
+                else:
+                    self.bids_VTL.append(b)
+            else:
+                if b.loan_type == "NZPL":
+                    self.bids_NZPL.append(b)
+                else:
+                    self.bids_NZVPL.append(b)
+        
+        for a in self.asks:
+            if a.loan_type == "FTL" or "VTL":
+                if a.loan_type == "FTL":
+                    self.asks_FTL.append(a)      
+                else:
+                    self.asks_VTL.append(a)
+            else:
+                if a.loan_type == "NZPL":
+                    self.asks_NZPL.append(a)
+                else:
+                    self.asks_NZVPL.append(a)
+                
+        return FixedTermLoan(self.bids_FTL, self.asks_FTL)
 
     def run(self):
         """A single marker run that consists of collecting bids and asks, running the clearing process
         and communicating the resulting allocations to the participating traders."""
         bids = []
         asks = []
-        for index,b in self.buyers.iterrows():
+        for index,b in auctioneer.buyers.iterrows():
             bids.append(Bid(b))
         for index, s in self.sellers.iterrows():
             asks.append(Ask(s))
         allocations = self.match(bids, asks)
-        for a in allocations:
-            a.buyer.send_allocation(self, a)
-            a.seller.send_allocation(self, a)
+
+        return allocations
             
-    def __init__(self, buyers: DataFrame, sellers: DataFrame):
-        self.buyers = buyers
-        self.sellers = sellers
+ 
 
 
 # %% 
@@ -104,5 +179,5 @@ sellers = readfile_df(sellers_path)
 
 auctioneer = Auctioneer(buyers, sellers)
 
-auctioneer.run()
+allocations = auctioneer.run()
 
