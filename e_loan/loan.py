@@ -1,19 +1,10 @@
 """ Imports """
 
-from typing import List
-import csv
 import pandas as pd
 from pandas import DataFrame
 
 # %%
 """ User functions """
-def readfile(path: str) -> List[List]:
-    
-    with open(path, 'r') as f:
-        reader = csv.reader(f)
-        data = list(reader)
-    return data
-
 def readfile_df(path: str) -> DataFrame:
     df = pd.read_csv(path)
     return df
@@ -50,11 +41,6 @@ class Ask:
         self.price = ask["price"]
 # %% 
 """Classes for different categories of loans"""
-class BlockOrderLoan:
-    def __init__(self, bids: list, asks: list):
-        self.bids_BL = bids
-        self.asks_BL = asks
-    pass
 
 def FixedTermLoan(bids: list, asks:list) -> DataFrame:
     
@@ -85,10 +71,6 @@ def FixedTermLoan(bids: list, asks:list) -> DataFrame:
                 pass
     return matches
             
-                
-                
-                    
-
 class VariableTermLoan:
     pass
 
@@ -117,38 +99,15 @@ class Auctioneer:
         self.asks = asks
         self.bids_FTL = []
         self.bids_VTL = []
-        self.bids_FTL = []
-        self.asks_FTL = []
         self.asks_FTL = []
         self.asks_VTL = []
-        self.asks_FTL = []
-        self.asks_FTL = []
-        
         
         for b in self.bids:
-            if b.loan_type == "FTL" or "VTL":
-                if b.loan_type == "FTL":
-                    self.bids_FTL.append(b)      
-                else:
-                    self.bids_VTL.append(b)
-            else:
-                if b.loan_type == "NZPL":
-                    self.bids_NZPL.append(b)
-                else:
-                    self.bids_NZVPL.append(b)
-        
+            getattr(self, "bids_%s" % b.loan_type).append(b)
+            
         for a in self.asks:
-            if a.loan_type == "FTL" or "VTL":
-                if a.loan_type == "FTL":
-                    self.asks_FTL.append(a)      
-                else:
-                    self.asks_VTL.append(a)
-            else:
-                if a.loan_type == "NZPL":
-                    self.asks_NZPL.append(a)
-                else:
-                    self.asks_NZVPL.append(a)
-                
+            getattr(self, "asks_%s" % a.loan_type).append(a)
+                  
         return FixedTermLoan(self.bids_FTL, self.asks_FTL)
 
     def run(self):
@@ -163,8 +122,6 @@ class Auctioneer:
         allocations = self.match(bids, asks)
 
         return allocations
-            
- 
 
 
 # %% 
